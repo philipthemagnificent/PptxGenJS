@@ -1,9 +1,9 @@
 {
 	"name": "pptxgenjs",
-	"version": "1.9.0-beta",
+	"version": "1.9.1-webpack",
 	"author": {
-		"name": "Brent Ely",
-		"url": "https://github.com/gitbrent/"
+		"name": "Philip Gheno",
+		"url": "https://github.com/philipthemagnificent/"
 	},
 	"description": "JavaScript framework that creates PowerPoint (pptx) presentations",
 	"homepage": "https://gitbrent.github.io/PptxGenJS/",
