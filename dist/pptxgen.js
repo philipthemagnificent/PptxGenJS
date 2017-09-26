@@ -45,30 +45,13 @@
   * @see: https://msdn.microsoft.com/en-us/library/office/hh273476(v=office.14).aspx
 */
 
-// Polyfill for IE11 (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isInteger)
-
-// [Node.js] support
-
-// Detect Node.js
-var NODEJS = ( Object.prototype.toString.call(global.process) === '[object process]' );
 
 // A: Load depdendencies
 var JSZip = require("jszip");
 var sizeOf = require("image-size");
 var $ = require("jquery");
 
-// [Node.js] <script> includes
-if ( NODEJS ) {
-  var fs = require("fs");
-  var $ = require("jquery-node");
-}
-if ( NODEJS ) {
-  var gObjPptxColors  = require('../dist/pptxgen.colors.js');
-  var gObjPptxShapes  = require('../dist/pptxgen.shapes.js');
-  /* LEGACY/DEPRECATED testing only - REMOVE in 2.0 (or sooner!) */
-  //var gObjPptxMasters = require('../dist/pptxgen.masters.js');
-}
-
+// Polyfill for IE11 (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isInteger)
 Number.isInteger = Number.isInteger || function(value) {
   return typeof value === "number" && isFinite(value) && Math.floor(value) === value;
 };
@@ -380,8 +363,6 @@ var PptxGenJS = function(){
       if ( strImageData && /image\/(\w+)\;/.exec(strImageData) && /image\/(\w+)\;/.exec(strImageData).length > 0 ) {
         strImgExtn = /image\/(\w+)\;/.exec(strImageData)[1];
       }
-      // Node.js can read/base64-encode any image, so take at face value
-      if ( NODEJS && strImagePath.indexOf('.') > -1 ) strImgExtn = strImagePath.split('.').pop();
 
       resultObject.type  = 'image';
       resultObject.image = (strImagePath || 'preencoded.png');
@@ -1550,19 +1531,6 @@ var PptxGenJS = function(){
       if ( outputType && JSZIP_OUTPUT_TYPES.indexOf(outputType) >= 0) {
         zip.generateAsync({ type:outputType }).then(gObjPptx.saveCallback);
       }
-      else if ( NODEJS ) {
-        if ( gObjPptx.saveCallback ) {
-          if ( strExportName.indexOf('http') == 0 ) {
-            zip.generateAsync({type:'nodebuffer'}).then(function(content){ gObjPptx.saveCallback(content); });
-          }
-          else {
-            zip.generateAsync({type:'nodebuffer'}).then(function(content){ fs.writeFile(strExportName, content, gObjPptx.saveCallback(strExportName)); });
-          }
-        }
-        else {
-          zip.generateAsync({type:'nodebuffer'}).then(function(content){ fs.writeFile(strExportName, content); });
-        }
-      }
       else {
         zip.generateAsync({type:'blob'}).then(function(content){ writeFileToBrowser(strExportName, content); });
       }
@@ -1673,17 +1641,6 @@ var PptxGenJS = function(){
   }
 
   function getSizeFromImage(inImgUrl) {
-    if ( NODEJS ) {
-      try {
-        var dimensions = sizeOf(inImgUrl);
-        return { width:dimensions.width, height:dimensions.height };
-      }
-      catch(ex) {
-        console.error('ERROR: Unable to read image: '+inImgUrl);
-        return { width:0, height:0 };
-      }
-    }
-
     // A: Create
     var image = new Image();
 
@@ -2186,22 +2143,9 @@ var PptxGenJS = function(){
     layout.rels.forEach(function(rel,idy){
       // Read and Encode each image into base64 for use in export
       if ( rel.type != 'online' && rel.type != 'chart' && !rel.data && $.inArray(rel.path, arrRelsDone) == -1 ) {
-        // Node encoding is syncronous, so we can load all images here, then call export with a callback (if any)
-        if ( NODEJS ) {
-          try {
-            var bitmap = fs.readFileSync(rel.path);
-            rel.data = new Buffer(bitmap).toString('base64');
-          }
-          catch(ex) {
-            console.error('ERROR: Unable to read media: '+rel.path);
-            rel.data = IMG_BROKEN;
-          }
-        }
-        else {
-          intRels++;
-          convertImgToDataURLviaCanvas(rel);
-          arrRelsDone.push(rel.path);
-        }
+        intRels++;
+        convertImgToDataURLviaCanvas(rel);
+        arrRelsDone.push(rel.path);
       }
     });
 
