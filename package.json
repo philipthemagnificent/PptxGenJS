@@ -1,6 +1,6 @@
 {
 	"name": "pptxgenjs-testwebpack",
-	"version": "1.9.4-webpack",
+	"version": "1.9.5-webpack",
 	"author": {
 		"name": "Philip Gheno",
 		"url": "https://github.com/philipthemagnificent/"
@@ -10,7 +10,6 @@
 	"license": "MIT",
 	"main": "dist/pptxgen.js",
 	"dependencies": {
-		"express": "^4.15.3",
 		"image-size": ">=0.5.1",
 		"jquery-node": "^0.3.0",
 		"jszip": ">=3.1.2"
