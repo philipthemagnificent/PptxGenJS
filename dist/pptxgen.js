@@ -51,9 +51,11 @@
 
 // Detect Node.js
 var NODEJS = ( Object.prototype.toString.call(global.process) === '[object process]' );
+
 // A: Load depdendencies
 var JSZip = require("jszip");
 var sizeOf = require("image-size");
+var $ = require("jquery");
 
 // [Node.js] <script> includes
 if ( NODEJS ) {
