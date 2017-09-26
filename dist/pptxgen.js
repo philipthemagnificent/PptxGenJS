@@ -4479,4 +4479,4 @@ var PptxGenJS = function(){
 };
 
 // B: Export module
-module.exports = new PptxGenJS();
+module.exports = PptxGenJS;
