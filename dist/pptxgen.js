@@ -185,7 +185,7 @@ var PptxGenJS = function(){
   var SCHEME_COLOR_NAMES = Object.keys(this.colors).map(function(clrKey){return this.colors[clrKey]}.bind(this));
 
   // D: Fall back to base shapes if shapes file was not linked
-  gObjPptxShapes = ( gObjPptxShapes || this.shapes );
+  gObjPptxShapes =  this.shapes;
 
   /* ===============================================================================================
   |
