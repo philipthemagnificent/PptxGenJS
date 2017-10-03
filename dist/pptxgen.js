@@ -46,10 +46,136 @@
 */
 
 
+const $$ = (...args) => {
+  return document.querySelectorAll.apply(this, args);
+}
+
+const isWindow = ( obj ) => {
+  return obj != null && obj === obj.window;
+}
+const isArrayLike = (obj) => {
+
+  // Support: real iOS 8.2 only (not reproducible in simulator)
+  // `in` check used to prevent JIT error (gh-2145)
+  // hasOwn isn't used here due to false negatives
+  // regarding Nodelist length in IE
+  var length = !!obj && "length" in obj && obj.length,
+    type = typeof obj;
+
+  if ( typeof obj === 'function' || isWindow( obj ) ) {
+    return false;
+  }
+
+  return type === "array" || length === 0 ||
+    typeof length === "number" && length > 0 && ( length - 1 ) in obj;
+};
+const isPlainObject = (obj) => {
+  // Not plain objects:
+  // - Any object or value whose internal [[Class]] property is not "[object Object]"
+  // - DOM nodes
+  // - window
+  if ( typeof obj !== "object" || obj.nodeType || isWindow( obj ) ) {
+    return false;
+  }
+
+  if ( obj.constructor &&
+      !hasOwn.call( obj.constructor.prototype, "isPrototypeOf" ) ) {
+    return false;
+  }
+
+  // If the function hasn't returned already, we're confident that
+  // |obj| is a plain object, created by {} or constructed with new Object
+  return true;
+};
+
+$$.each = (obj, callback) => {
+  var length, i = 0;
+
+  if ( isArrayLike( obj ) ) {
+    length = obj.length;
+    for ( ; i < length; i++ ) {
+      if ( callback.call( obj[ i ], i, obj[ i ] ) === false ) {
+        break;
+      }
+    }
+  } else {
+    for ( i in obj ) {
+      if ( callback.call( obj[ i ], i, obj[ i ] ) === false ) {
+        break;
+      }
+    }
+  }
+
+  return obj;
+};
+
+$$.extend = () => {
+  var options, name, src, copy, copyIsArray, clone,
+    target = arguments[0] || {},
+    i = 1,
+    length = arguments.length,
+    deep = false;
+
+  // Handle a deep copy situation
+  if ( typeof target === "boolean" ) {
+    deep = target;
+
+    // Skip the boolean and the target
+    target = arguments[ i ] || {};
+    i++;
+  }
+
+  // Handle case when target is a string or something (possible in deep copy)
+  if ( typeof target !== "object" && typeof target !== 'function' ) {
+    target = {};
+  }
+
+  // Extend jQuery itself if only one argument is passed
+  if ( i === length ) {
+    target = this;
+    i--;
+  }
+
+  for ( ; i < length; i++ ) {
+    // Only deal with non-null/undefined values
+    if ( (options = arguments[ i ]) != null ) {
+      // Extend the base object
+      for ( name in options ) {
+        src = target[ name ];
+        copy = options[ name ];
+
+        // Prevent never-ending loop
+        if ( target === copy ) {
+          continue;
+        }
+
+        // Recurse if we're merging plain objects or arrays
+        if ( deep && copy && ( isPlainObject(copy) || (copyIsArray = isArrayLike(copy)) ) ) {
+          if ( copyIsArray ) {
+            copyIsArray = false;
+            clone = src && isArrayLike(src) ? src : [];
+
+          } else {
+            clone = src && isPlainObject(src) ? src : {};
+          }
+
+          // Never move original objects, clone them
+          target[ name ] = extend( deep, clone, copy );
+
+        // Don't bring in undefined values
+        } else if ( copy !== undefined ) {
+          target[ name ] = copy;
+        }
+      }
+    }
+  }
+
+  // Return the modified object
+  return target;
+};
+
 // A: Load depdendencies
 var JSZip = require("jszip");
-var sizeOf = require("image-size");
-var $ = require("jquery");
 
 // Polyfill for IE11 (https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/isInteger)
 Number.isInteger = Number.isInteger || function(value) {
@@ -747,12 +873,12 @@ var PptxGenJS = function(){
               |      |      |  C2  |  D2  |
               \------|------|------|------/
             */
-            $.each(arrTabRows, function(rIdx,row){
+            $$.each(arrTabRows, function(rIdx,row){
               // A: Create row if needed (recall one may be created in loop below for rowspans, so dont assume we need to create one each iteration)
               if ( !objTableGrid[rIdx] ) objTableGrid[rIdx] = {};
 
               // B: Loop over all cells
-              $(row).each(function(cIdx,cell){
+              $$(row).each(function(cIdx,cell){
                 // DESIGN: NOTE: Row cell arrays can be "uneven" (diff cell count in each) due to rowspan/colspan
                 // Therefore, for each cell we run 0->colCount to determien the correct slot for it to reside
                 // as the uneven/mixed nature of the data means we cannot use the cIdx value alone.
@@ -787,13 +913,13 @@ var PptxGenJS = function(){
             if ( objTabOpts.debug ) {
               console.table(objTableGrid);
               var arrText = [];
-              $.each(objTableGrid, function(i,row){ var arrRow = []; $.each(row,function(i,cell){ arrRow.push(cell.text); }); arrText.push(arrRow); });
+              $$.each(objTableGrid, function(i,row){ var arrRow = []; $$.each(row,function(i,cell){ arrRow.push(cell.text); }); arrText.push(arrRow); });
               console.table( arrText );
             }
             */
 
             // STEP 4: Build table rows/cells ============================
-            $.each(objTableGrid, function(rIdx,rowObj){
+            $$.each(objTableGrid, function(rIdx,rowObj){
               // A: Table Height provided without rowH? Then distribute rows
               var intRowH = 0; // IMPORTANT: Default must be zero for auto-sizing to work
               if ( Array.isArray(objTabOpts.rowH) && objTabOpts.rowH[rIdx] ) intRowH = inch2Emu(Number(objTabOpts.rowH[rIdx]));
@@ -804,7 +930,7 @@ var PptxGenJS = function(){
               strXml += '<a:tr h="'+ intRowH +'">';
 
               // C: Loop over each CELL
-              $.each(rowObj, function(cIdx,cell){
+              $$.each(rowObj, function(cIdx,cell){
                 // 1: "hmerge" cells are just place-holders in the table grid - skip those and go to next cell
                 if ( cell.hmerge ) return;
 
@@ -856,7 +982,7 @@ var PptxGenJS = function(){
                   strXml += '  <a:lnB w="'+ ONEPT +'" cap="flat" cmpd="sng" algn="ctr"><a:solidFill><a:srgbClr val="'+ cellOpts.border +'"/></a:solidFill></a:lnB>';
                 }
                 else if ( cellOpts.border && Array.isArray(cellOpts.border) ) {
-                  $.each([ {idx:3,name:'lnL'}, {idx:1,name:'lnR'}, {idx:0,name:'lnT'}, {idx:2,name:'lnB'} ], function(i,obj){
+                  $$.each([ {idx:3,name:'lnL'}, {idx:1,name:'lnR'}, {idx:0,name:'lnT'}, {idx:2,name:'lnB'} ], function(i,obj){
                     if ( cellOpts.border[obj.idx] ) {
                       var strC = '<a:solidFill><a:srgbClr val="'+ ((cellOpts.border[obj.idx].color) ? cellOpts.border[obj.idx].color : DEF_CELL_BORDER.color) +'"/></a:solidFill>';
                       var intW = (cellOpts.border[obj.idx] && (cellOpts.border[obj.idx].pt || cellOpts.border[obj.idx].pt == 0)) ? (ONEPT * Number(cellOpts.border[obj.idx].pt)) : ONEPT;
@@ -1551,7 +1677,7 @@ var PptxGenJS = function(){
     if ( window.navigator.msSaveOrOpenBlob ) {
       // REF: https://docs.microsoft.com/en-us/microsoft-edge/dev-guide/html5/file-api/blob
       blobObject = new Blob([content]);
-      $(a).click(function(){
+      $$(a).click(function(){
         window.navigator.msSaveOrOpenBlob(blobObject, strExportName);
       });
       a.click();
@@ -1812,8 +1938,8 @@ var PptxGenJS = function(){
     var inStr = (cell.text || '').toString().trim();
 
     // B: Build line array
-    $.each(inStr.split('\n'), function(i,line){
-      $.each(line.split(' '), function(i,word){
+    $$.each(inStr.split('\n'), function(i,line){
+      $$.each(line.split(' '), function(i,word){
         if ( strCurrLine.length + word.length + 1 < CPL ) {
           strCurrLine += (word + " ");
         }
@@ -1823,12 +1949,12 @@ var PptxGenJS = function(){
         }
       });
       // All words for this line have been exhausted, flush buffer to new line, clear line var
-      if ( strCurrLine ) arrLines.push( $.trim(strCurrLine) + CRLF );
+      if ( strCurrLine ) arrLines.push( $$.trim(strCurrLine) + CRLF );
       strCurrLine = '';
     });
 
     // C: Remove trailing linebreak
-    arrLines[(arrLines.length-1)] = $.trim(arrLines[(arrLines.length-1)]);
+    arrLines[(arrLines.length-1)] = $$.trim(arrLines[(arrLines.length-1)]);
 
     // D: Return lines
     return arrLines;
@@ -1982,30 +2108,30 @@ var PptxGenJS = function(){
             // NOTE: Edge cases can occur where we create a new slide only to have no more lines
             // ....: and then a blank row sits at the bottom of a table!
             // ....: Hence, we verify all cells have text before adding this final row.
-            $.each(currRow, function(i,cell){
+            $$.each(currRow, function(i,cell){
               if (cell.text.length > 0 ) {
                 // IMPORTANT: use jQuery extend (deep copy) or cell will mutate!!
-                arrRows.push( $.extend(true, [], currRow) );
+                arrRows.push( $$.extend(true, [], currRow) );
                 return false; // break out of .each loop
               }
             });
             // 2: Add new Slide with current array of table rows
-            arrObjSlides.push( $.extend(true, [], arrRows) );
+            arrObjSlides.push( $$.extend(true, [], arrRows) );
             // 3: Empty rows for new Slide
             arrRows.length = 0;
             // 4: Reset current table height for new Slide
             emuTabCurrH = 0; // This row's emuRowH w/b added below
             // 5: Empty current row's text (continue adding lines where we left off below)
-            $.each(currRow,function(i,cell){ cell.text = ''; });
+            $$.each(currRow,function(i,cell){ cell.text = ''; });
             // 6: Auto-Paging Options: addHeaderToEach
             if ( opts.addHeaderToEach && arrObjTabHeadRows ) {
               var headRow = [];
-              $.each(arrObjTabHeadRows[0], function(iCell,cell){
+              $$.each(arrObjTabHeadRows[0], function(iCell,cell){
                 headRow.push({ text:cell.text, opts:cell.opts });
                 var lines = parseTextToLines(cell,(opts.colW[iCell]/ONEPT));
                 if ( lines.length > intMaxLineCnt ) { intMaxLineCnt = lines.length; intMaxColIdx = iCell; }
               });
-              arrRows.push( $.extend(true, [], headRow) );
+              arrRows.push( $$.extend(true, [], headRow) );
             }
           }
 
@@ -2022,12 +2148,12 @@ var PptxGenJS = function(){
 
       // E: Flush row buffer - Add the current row to table, then truncate row cell array
       // IMPORTANT: use jQuery extend (deep copy) or cell will mutate!!
-      if (currRow.length) arrRows.push( $.extend(true,[],currRow) );
+      if (currRow.length) arrRows.push( $$.extend(true,[],currRow) );
       currRow.length = 0;
     });
 
     // STEP 4-2: Flush final row buffer to slide
-    arrObjSlides.push( $.extend(true,[],arrRows) );
+    arrObjSlides.push( $$.extend(true,[],arrRows) );
 
     // LAST:
     if (opts.debug) { console.log('arrObjSlides count = '+arrObjSlides.length); console.log(arrObjSlides); }
@@ -2142,7 +2268,7 @@ var PptxGenJS = function(){
 
     layout.rels.forEach(function(rel,idy){
       // Read and Encode each image into base64 for use in export
-      if ( rel.type != 'online' && rel.type != 'chart' && !rel.data && $.inArray(rel.path, arrRelsDone) == -1 ) {
+      if ( rel.type != 'online' && rel.type != 'chart' && !rel.data && $$.inArray(rel.path, arrRelsDone) == -1 ) {
         intRels++;
         convertImgToDataURLviaCanvas(rel);
         arrRelsDone.push(rel.path);
@@ -3138,7 +3264,7 @@ var PptxGenJS = function(){
       // C: Inherit any main options (color, font_size, etc.)
       // We only pass the text.options to genXmlTextRun (not the Slide.options),
       // so the run building function cant just fallback to Slide.color, therefore, we need to do that here before passing options below.
-      $.each(slideObj.options, function(key,val){
+      $$.each(slideObj.options, function(key,val){
         // NOTE: This loop will pick up unecessary keys (`x`, etc.), but it doesnt hurt anything
         if ( key != 'bullet' && !textObj.options[key] ) textObj.options[key] = val;
       });
@@ -3411,7 +3537,7 @@ var PptxGenJS = function(){
     strXml += '<TitlesOfParts>';
     strXml += '<vt:vector size="'+ (gObjPptx.slides.length+1) +'" baseType="lpstr">';
     strXml += '<vt:lpstr>Office Theme</vt:lpstr>';
-    $.each(gObjPptx.slides, function(idx,slideObj){ strXml += '<vt:lpstr>Slide '+ (idx+1) +'</vt:lpstr>'; });
+    $$.each(gObjPptx.slides, function(idx,slideObj){ strXml += '<vt:lpstr>Slide '+ (idx+1) +'</vt:lpstr>'; });
     strXml += '</vt:vector>';
     strXml += '</TitlesOfParts>';
     strXml += '<Company>'+gObjPptx.company+'</Company>';
@@ -3757,7 +3883,7 @@ var PptxGenJS = function(){
 
       gObjPptx.pptLayout = LAYOUTS['LAYOUT_USER'];
     }
-    else if ( $.inArray(inLayout, Object.keys(LAYOUTS)) > -1 ) {
+    else if ( $$.inArray(inLayout, Object.keys(LAYOUTS)) > -1 ) {
       gObjPptx.pptLayout = LAYOUTS[inLayout];
     }
     else {
@@ -3964,7 +4090,7 @@ var PptxGenJS = function(){
 
       // STEP 4: Add this media to this Slide Rels (rId/rels count spans all slides! Count all media to get next rId)
       // NOTE: rId starts at 2 (hence the intRels+1 below) as slideLayout.xml is rId=1!
-      $.each(gObjPptx.slides, function(i,slide){ intRels += slide.rels.length; });
+      $$.each(gObjPptx.slides, function(i,slide){ intRels += slide.rels.length; });
 
       if ( strType == 'online' ) {
         slideObjRels.push({
@@ -4043,8 +4169,8 @@ var PptxGenJS = function(){
       }
 
       // STEP 2: Row setup: Handle case where user passed in a simple 1-row array. EX: `["cell 1", "cell 2"]`
-      //var arrRows = $.extend(true,[],arrTabRows);
-      //if ( !Array.isArray(arrRows[0]) ) arrRows = [ $.extend(true,[],arrTabRows) ];
+      //var arrRows = $$.extend(true,[],arrTabRows);
+      //if ( !Array.isArray(arrRows[0]) ) arrRows = [ $$.extend(true,[],arrTabRows) ];
       var arrRows = arrTabRows;
       if ( !Array.isArray(arrRows[0]) ) arrRows = [ arrTabRows ];
 
@@ -4132,7 +4258,7 @@ var PptxGenJS = function(){
         gObjPptx.slides[slideNum].data[gObjPptx.slides[slideNum].data.length] = {
           type:       'table',
           arrTabRows: arrRows,
-          options:    $.extend(true,{},opt)
+          options:    $$.extend(true,{},opt)
         };
       }
       else {
@@ -4146,7 +4272,7 @@ var PptxGenJS = function(){
 
           // C: Add this table to new Slide
           opt.autoPage = false;
-          currSlide.addTable(arrRows, $.extend(true,{},opt));
+          currSlide.addTable(arrRows, $$.extend(true,{},opt));
         });
       }
 
@@ -4173,7 +4299,7 @@ var PptxGenJS = function(){
     // for now this function in parallel with defineSlideMaster() providing backwards compatibility
     if ( inMaster && typeof inMaster === 'object' ) {
       // Add Slide Master objects in order
-      $.each(inMaster, function(key,val){
+      $$.each(inMaster, function(key,val){
         // ISSUE#7: Allow bkgd image/color override on Slide-level
         if ( key == 'bkgd' && inMasterOpts.bkgd ) val = inMasterOpts.bkgd;
 
@@ -4185,7 +4311,7 @@ var PptxGenJS = function(){
 
         // Images **DEPRECATED** (v1.5.0)
         if ( key == "images" && Array.isArray(val) && val.length > 0 ) {
-          $.each(val, function(i,image){
+          $$.each(val, function(i,image){
             slideObj.addImage({
               data: (image.data || ''),
               path: (image.path || image.src || ''),
@@ -4199,10 +4325,10 @@ var PptxGenJS = function(){
 
         // Shapes **DEPRECATED** (v1.5.0)
         if ( key == "shapes" && Array.isArray(val) && val.length > 0 ) {
-          $.each(val, function(i,shape){
+          $$.each(val, function(i,shape){
             // 1: Grab all options (x, y, color, etc.)
             var objOpts = {};
-            $.each(Object.keys(shape), function(i,key){ if ( shape[key] != 'type' ) objOpts[key] = shape[key]; });
+            $$.each(Object.keys(shape), function(i,key){ if ( shape[key] != 'type' ) objOpts[key] = shape[key]; });
             // 2: Create object using 'type'
             if      ( shape.type == 'text'      ) slideObj.addText(shape.text, objOpts);
             else if ( shape.type == 'line'      ) slideObj.addShape(gObjPptxShapes.LINE, objOpts);
@@ -4275,7 +4401,7 @@ var PptxGenJS = function(){
     var intTabW = 0, emuTabCurrH = 0;
 
     // REALITY-CHECK:
-    if ( $('#'+tabEleId).length == 0 ) { console.error('Table "'+tabEleId+'" does not exist!'); return; }
+    if ( $$('#'+tabEleId).length == 0 ) { console.error('Table "'+tabEleId+'" does not exist!'); return; }
 
     var arrInchMargins = [0.5, 0.5, 0.5, 0.5]; // TRBL-style
     opts.margin = (opts.marginPt || opts.margin); // (Legacy Support/DEPRECATED)
@@ -4305,86 +4431,86 @@ var PptxGenJS = function(){
     var emuSlideTabH = ( opts.h ? inch2Emu(opts.h) : (gObjPptx.pptLayout.height - inch2Emu(arrInchMargins[0] + arrInchMargins[2])) );
 
     // STEP 1: Grab table col widths
-    $.each(['thead','tbody','tfoot'], function(i,val){
-      if ( $('#'+tabEleId+' > '+val+' > tr').length > 0 ) {
-        $('#'+tabEleId+' > '+val+' > tr:first-child').find('> th, > td').each(function(i,cell){
+    $$.each(['thead','tbody','tfoot'], function(i,val){
+      if ( $$('#'+tabEleId+' > '+val+' > tr').length > 0 ) {
+        $$('#'+tabEleId+' > '+val+' > tr:first-child').find('> th, > td').each(function(i,cell){
           // FIXME: This is a hack - guessing at col widths when colspan
-          if ( $(this).attr('colspan') ) {
-            for (var idx=0; idx<$(this).attr('colspan'); idx++ ) {
-              arrTabColW.push( Math.round($(this).outerWidth()/$(this).attr('colspan')) );
+          if ( $$(this).attr('colspan') ) {
+            for (var idx=0; idx<$$(this).attr('colspan'); idx++ ) {
+              arrTabColW.push( Math.round($$(this).outerWidth()/$$(this).attr('colspan')) );
             }
           }
           else {
-            arrTabColW.push( $(this).outerWidth() );
+            arrTabColW.push( $$(this).outerWidth() );
           }
         });
         return false; // break out of .each loop
       }
     });
-    $.each(arrTabColW, function(i,colW){ intTabW += colW; });
+    $$.each(arrTabColW, function(i,colW){ intTabW += colW; });
 
     // STEP 2: Calc/Set column widths by using same column width percent from HTML table
-    $.each(arrTabColW, function(i,colW){
-      var intMinWidth = $('#'+tabEleId+' thead tr:first-child th:nth-child('+ (i+1) +')').data('pptx-min-width');
+    $$.each(arrTabColW, function(i,colW){
+      var intMinWidth = $$('#'+tabEleId+' thead tr:first-child th:nth-child('+ (i+1) +')').data('pptx-min-width');
       var intCalcWidth = Number(((emuSlideTabW * (colW / intTabW * 100) ) / 100 / EMU).toFixed(2));
       arrColW.push( (intMinWidth > intCalcWidth ? intMinWidth : intCalcWidth) );
     });
 
     // STEP 3: Iterate over each table element and create data arrays (text and opts)
     // NOTE: We create 3 arrays instead of one so we can loop over body then show header/footer rows on first and last page
-    $.each(['thead','tbody','tfoot'], function(i,val){
-      $('#'+tabEleId+' > '+val+' > tr').each(function(i,row){
+    $$.each(['thead','tbody','tfoot'], function(i,val){
+      $$('#'+tabEleId+' > '+val+' > tr').each(function(i,row){
         var arrObjTabCells = [];
-        $(row).find('> th, > td').each(function(i,cell){
+        $$(row).find('> th, > td').each(function(i,cell){
           // A: Get RGB text/bkgd colors
           var arrRGB1 = [];
           var arrRGB2 = [];
-          arrRGB1 = $(cell).css('color').replace(/\s+/gi,'').replace('rgba(','').replace('rgb(','').replace(')','').split(',');
-          arrRGB2 = $(cell).css('background-color').replace(/\s+/gi,'').replace('rgba(','').replace('rgb(','').replace(')','').split(',');
+          arrRGB1 = $$(cell).css('color').replace(/\s+/gi,'').replace('rgba(','').replace('rgb(','').replace(')','').split(',');
+          arrRGB2 = $$(cell).css('background-color').replace(/\s+/gi,'').replace('rgba(','').replace('rgb(','').replace(')','').split(',');
           // ISSUE#57: jQuery default is this rgba value of below giving unstyled tables a black bkgd, so use white instead (FYI: if cell has `background:#000000` jQuery returns 'rgb(0, 0, 0)', so this soln is pretty solid)
-          if ( $(cell).css('background-color') == 'rgba(0, 0, 0, 0)' || $(cell).css('background-color') == 'transparent' ) arrRGB2 = [255,255,255];
+          if ( $$(cell).css('background-color') == 'rgba(0, 0, 0, 0)' || $$(cell).css('background-color') == 'transparent' ) arrRGB2 = [255,255,255];
 
           // B: Create option object
           var objOpts = {
-            font_size: $(cell).css('font-size').replace(/\D/gi,''),
-            bold:      (( $(cell).css('font-weight') == "bold" || Number($(cell).css('font-weight')) >= 500 ) ? true : false),
+            font_size: $$(cell).css('font-size').replace(/\D/gi,''),
+            bold:      (( $$(cell).css('font-weight') == "bold" || Number($$(cell).css('font-weight')) >= 500 ) ? true : false),
             color:     rgbToHex( Number(arrRGB1[0]), Number(arrRGB1[1]), Number(arrRGB1[2]) ),
             fill:      rgbToHex( Number(arrRGB2[0]), Number(arrRGB2[1]), Number(arrRGB2[2]) )
           };
-          if ( $.inArray($(cell).css('text-align'), ['left','center','right','start','end']) > -1 ) objOpts.align = $(cell).css('text-align').replace('start','left').replace('end','right');
-          if ( $.inArray($(cell).css('vertical-align'), ['top','middle','bottom']) > -1 ) objOpts.valign = $(cell).css('vertical-align');
+          if ( $$.inArray($$(cell).css('text-align'), ['left','center','right','start','end']) > -1 ) objOpts.align = $$(cell).css('text-align').replace('start','left').replace('end','right');
+          if ( $$.inArray($$(cell).css('vertical-align'), ['top','middle','bottom']) > -1 ) objOpts.valign = $$(cell).css('vertical-align');
 
           // C: Add padding [margin] (if any)
           // NOTE: Margins translate: px->pt 1:1 (e.g.: a 20px padded cell looks the same in PPTX as 20pt Text Inset/Padding)
-          if ( $(cell).css('padding-left') ) {
+          if ( $$(cell).css('padding-left') ) {
             objOpts.margin = [];
-            $.each(['padding-top', 'padding-right', 'padding-bottom', 'padding-left'],function(i,val){
-              objOpts.margin.push( Math.round($(cell).css(val).replace(/\D/gi,'')) );
+            $$.each(['padding-top', 'padding-right', 'padding-bottom', 'padding-left'],function(i,val){
+              objOpts.margin.push( Math.round($$(cell).css(val).replace(/\D/gi,'')) );
             });
           }
 
           // D: Add colspan (if any)
-          if ( $(cell).attr('colspan') ) objOpts.colspan = $(cell).attr('colspan');
+          if ( $$(cell).attr('colspan') ) objOpts.colspan = $$(cell).attr('colspan');
 
           // E: Add border (if any)
-          if ( $(cell).css('border-top-width') || $(cell).css('border-right-width') || $(cell).css('border-bottom-width') || $(cell).css('border-left-width') ) {
+          if ( $$(cell).css('border-top-width') || $$(cell).css('border-right-width') || $$(cell).css('border-bottom-width') || $$(cell).css('border-left-width') ) {
             objOpts.border = [];
-            $.each(['top','right','bottom','left'], function(i,val){
-              var intBorderW = Math.round( Number($(cell).css('border-'+val+'-width').replace('px','')) );
+            $$.each(['top','right','bottom','left'], function(i,val){
+              var intBorderW = Math.round( Number($$(cell).css('border-'+val+'-width').replace('px','')) );
               var arrRGB = [];
-              arrRGB = $(cell).css('border-'+val+'-color').replace(/\s+/gi,'').replace('rgba(','').replace('rgb(','').replace(')','').split(',');
+              arrRGB = $$(cell).css('border-'+val+'-color').replace(/\s+/gi,'').replace('rgba(','').replace('rgb(','').replace(')','').split(',');
               var strBorderC = rgbToHex( Number(arrRGB[0]), Number(arrRGB[1]), Number(arrRGB[2]) );
               objOpts.border.push( {pt:intBorderW, color:strBorderC} );
             });
           }
 
           // F: Massage cell text so we honor linebreak tag as a line break during line parsing
-          var $cell2 = $(cell).clone();
-          $cell2.html( $(cell).html().replace(/<br[^>]*>/gi,'\n') );
+          var $cell2 = $$(cell).clone();
+          $cell2.html( $$(cell).html().replace(/<br[^>]*>/gi,'\n') );
 
           // LAST: Add cell
           arrObjTabCells.push({
-            text: $.trim( $cell2.text() ),
+            text: $$.trim( $cell2.text() ),
             opts: objOpts
           });
         });
