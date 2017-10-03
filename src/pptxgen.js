@@ -303,15 +303,15 @@ var PptxGenJS = function(){
 
   // C: Expose shape library to clients
   this.charts  = CHART_TYPES;
-  this.colors  = ( typeof gObjPptxColors  !== 'undefined' ? gObjPptxColors  : {} );
-  this.shapes  = ( typeof gObjPptxShapes  !== 'undefined' ? gObjPptxShapes  : BASE_SHAPES );
-  this.masters = ( typeof gObjPptxMasters !== 'undefined' ? gObjPptxMasters : {} );
+  this.colors  = {};
+  this.shapes  = BASE_SHAPES;
+  this.masters = {};
   /* LEGACY/DEPRECATED ^^^ - WILL BE REMOVED in 2.0 */
   // Declare only after `this.colors` is initialized
   var SCHEME_COLOR_NAMES = Object.keys(this.colors).map(function(clrKey){return this.colors[clrKey]}.bind(this));
 
   // D: Fall back to base shapes if shapes file was not linked
-  gObjPptxShapes =  this.shapes;
+  var gObjPptxShapes =  this.shapes;
 
   /* ===============================================================================================
   |
