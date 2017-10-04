@@ -2297,7 +2297,7 @@ var PptxGenJS = function(){
   /**
    * shallow mix, returns new object
    */
-  function mix (o1, o2) {
+  function mix () {
     var o = {};
     for (var i = 0; i <= arguments.length; i++){
       var oN = arguments[i];
@@ -2520,20 +2520,6 @@ var PptxGenJS = function(){
     // LAST: chartSpace end
     strXml += '</c:chartSpace>';
 
-    return strXml;
-  }
-
-  function createGridLineElement(glOpts, defaults, type) {
-    type = type || 'major';
-    var tagName = 'c:'+ type + 'Gridlines';
-    strXml =  '<'+ tagName + '>';
-    strXml += ' <c:spPr>';
-    strXml += '  <a:ln w="' + Math.round((glOpts.size || defaults.size) * ONEPT) +'" cap="flat">';
-    strXml += '  <a:solidFill><a:srgbClr val="' + (glOpts.color || defaults.color) + '"/></a:solidFill>'; // should accept scheme colors as implemented in PR 135
-    strXml += '   <a:prstDash val="' + (glOpts.style || defaults.style) + '"/><a:round/>';
-    strXml += '  </a:ln>';
-    strXml += ' </c:spPr>';
-    strXml += '</'+ tagName + '>';
     return strXml;
   }
 
@@ -2931,7 +2917,7 @@ var PptxGenJS = function(){
 
     // Issue#149: PPT will auto-adjust these as needed after calcing the date bounds, so we only include them when specified by user
     if ( opts.catLabelFormatCode ) {
-      ['catAxisBaseTimeUnit','catAxisMajorTimeUnit','catAxisMinorTimeUnit'].forEach(function(opt,idx){
+      ['catAxisBaseTimeUnit','catAxisMajorTimeUnit','catAxisMinorTimeUnit'].forEach(function(opt){
         // Validate input as poorly chosen/garbage options will cause chart corruption and it wont render at all!
         if ( opts[opt] && (typeof opts[opt] !== 'string' || ['days','months','years'].indexOf(opt.toLowerCase()) == -1) ) {
           console.warn("`"+opt+"` must be one of: 'days','months','years' !");
@@ -3141,7 +3127,7 @@ var PptxGenJS = function(){
 
         // C: If text string has line-breaks, then create a separate text-object for each (much easier than dealing with split inside a loop below)
         if ( obj.text.split(CRLF).length > 0 ) {
-          obj.text.toString().split(CRLF).forEach(function(line,idx){
+          obj.text.toString().split(CRLF).forEach(function(line){
             // Add line-breaks if not bullets/aligned (we add CRLF for those below in STEP 2)
             line += ( obj.options.breakLine && !obj.options.bullet && !obj.options.align ? CRLF : '' );
             arrTextObjects.push( {text:line, options:obj.options} );
@@ -3210,9 +3196,6 @@ var PptxGenJS = function(){
         if ( textObj.options.indentLevel && !isNaN(Number(textObj.options.indentLevel)) && textObj.options.indentLevel > 0 ) {
           paragraphPropXml += ' lvl="' + textObj.options.indentLevel + '"';
         }
-
-        // Set core XML for use below
-        paraPropXmlCore = paragraphPropXml;
 
         // OPTION: bullet
         // NOTE: OOXML uses the unicode character set for Bullets
@@ -3450,8 +3433,8 @@ var PptxGenJS = function(){
     strXml += ' <Default Extension="gif" ContentType="image/gif"/>';
     strXml += ' <Default Extension="m4v" ContentType="video/mp4"/>'; // hard-coded as extn!=type
     strXml += ' <Default Extension="mp4" ContentType="video/mp4"/>'; // same here, we have to add as it wont be added in loop below
-    gObjPptx.slides.forEach(function(slide,idx){
-      slide.rels.forEach(function(rel,idy){
+    gObjPptx.slides.forEach(function(slide){
+      slide.rels.forEach(function(rel){
         if ( rel.type != 'image' && rel.type != 'online' && rel.type != 'chart' && rel.extn != 'm4v' && strXml.indexOf(rel.type) == -1 )
           strXml += ' <Default Extension="'+ rel.extn +'" ContentType="'+ rel.type +'"/>';
       });
@@ -3533,7 +3516,7 @@ var PptxGenJS = function(){
     strXml += '<TitlesOfParts>';
     strXml += '<vt:vector size="'+ (gObjPptx.slides.length+1) +'" baseType="lpstr">';
     strXml += '<vt:lpstr>Office Theme</vt:lpstr>';
-    $$.each(gObjPptx.slides, function(idx,slideObj){ strXml += '<vt:lpstr>Slide '+ (idx+1) +'</vt:lpstr>'; });
+    $$.each(gObjPptx.slides, function(idx){ strXml += '<vt:lpstr>Slide '+ (idx+1) +'</vt:lpstr>'; });
     strXml += '</vt:vector>';
     strXml += '</TitlesOfParts>';
     strXml += '<Company>'+gObjPptx.company+'</Company>';
@@ -3699,7 +3682,6 @@ var PptxGenJS = function(){
    * @return {String} complete XML string ready to be saved as a file
    */
   function makeXmlMasterRel(masterSlideObject) {
-    var relCount = masterSlideObject.rels.length
     var defaultRels = gObjPptx.slideLayouts.map(function(layoutDef, idx) {
       return { target: '../slideLayouts/slideLayout'+ (idx + 1) +'.xml', type: 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout' };
     });
@@ -3718,7 +3700,6 @@ var PptxGenJS = function(){
    */
   function getLayoutIdxForSlide(slideNumber) {
     var layoutName = gObjPptx.slides[slideNumber - 1].layout;
-    var layoutIdx = -1;
 
     for (var i=0; i<gObjPptx.slideLayouts.length; i++) {
       if (gObjPptx.slideLayouts[i].name === layoutName) {
@@ -3768,7 +3749,7 @@ var PptxGenJS = function(){
         + '<p:notesSz cx="'+ gObjPptx.pptLayout.height +'" cy="' + gObjPptx.pptLayout.width + '"/>'
         + '<p:defaultTextStyle>';
         + '  <a:defPPr><a:defRPr lang="en-US"/></a:defPPr>';
-    for ( var idx=1; idx<10; idx++ ) {
+    for ( idx=1; idx<10; idx++ ) {
       strXml += '  <a:lvl' + idx + 'pPr marL="' + intCurPos + '" algn="l" defTabSz="914400" rtl="0" eaLnBrk="1" latinLnBrk="0" hangingPunct="1">'
           + '    <a:defRPr sz="1800" kern="1200">'
           + '      <a:solidFill><a:schemeClr val="tx1"/></a:solidFill>'
@@ -3883,7 +3864,7 @@ var PptxGenJS = function(){
       gObjPptx.pptLayout = LAYOUTS[inLayout];
     }
     else {
-      try { console.warn('UNKNOWN LAYOUT! Valid values = ' + Object.keys(LAYOUTS)); } catch(ex){}
+      console.warn('UNKNOWN LAYOUT! Valid values = ' + Object.keys(LAYOUTS));
     }
   }
 
@@ -3940,10 +3921,10 @@ var PptxGenJS = function(){
     // PERF: Only send unique paths for encoding (encoding func will find and fill *ALL* matching paths across the Presentation)
 
     // A: Slide rels
-    gObjPptx.slides.forEach(function(slide,idx){ intRels += encodeImageRelations(slide, arrRelsDone); });
+    gObjPptx.slides.forEach(function(slide){ intRels += encodeImageRelations(slide, arrRelsDone); });
 
     // B: Layout rels
-    gObjPptx.slideLayouts.forEach(function(layout,idx){ intRels += encodeImageRelations(layout, arrRelsDone); });
+    gObjPptx.slideLayouts.forEach(function(layout){ intRels += encodeImageRelations(layout, arrRelsDone); });
 
     // C: Master Slide rels
     intRels += encodeImageRelations(gObjPptx.masterSlide, arrRelsDone);
@@ -3958,10 +3939,9 @@ var PptxGenJS = function(){
    */
   this.addNewSlide = function addNewSlide(inMaster, inMasterOpts) {
     // DEPRECATED: moving to only `inMaster` soon (deprecated in 1.8.0)
-    var inMasterOpts = ( inMasterOpts && typeof inMasterOpts === 'object' ? inMasterOpts : {} );
+    inMasterOpts = ( inMasterOpts && typeof inMasterOpts === 'object' ? inMasterOpts : {} );
     var slideObj = {};
     var slideNum = gObjPptx.slides.length;
-    var slideObjNum = 0;
     var pageNum  = (slideNum + 1);
 
     // A: Add this SLIDE to PRESENTATION, Add default values as well
@@ -4160,7 +4140,7 @@ var PptxGenJS = function(){
 
       // STEP 1: REALITY-CHECK
       if ( arrTabRows == null || arrTabRows.length == 0 || !Array.isArray(arrTabRows) ) {
-        try { console.warn('[warn] addTable: Array expected! USAGE: slide.addTable( [rows], {options} );'); } catch(ex){}
+        console.warn('[warn] addTable: Array expected! USAGE: slide.addTable( [rows], {options} );');
         return null;
       }
 
@@ -4238,8 +4218,8 @@ var PptxGenJS = function(){
       // STEP 5: Check for fine-grained formatting, disable auto-page when found
       // Since genXmlTextBody already checks for text array ( text:[{},..{}] ) we're done!
       // Text in individual cells will be formatted as they are added by calls to genXmlTextBody within table builder
-      arrRows.forEach(function(row,rIdx){
-        row.forEach(function(cell,cIdx){
+      arrRows.forEach(function(row){
+        row.forEach(function(cell){
           if ( cell && cell.text && Array.isArray(cell.text) ) opt.autoPage = false;
         });
       });
@@ -4334,7 +4314,7 @@ var PptxGenJS = function(){
 
         // Add all Slide Master objects in the order they were given (Issue#53)
         if ( key == "objects" && Array.isArray(val) && val.length > 0 ) {
-          val.forEach(function(object,idx){
+          val.forEach(function(object){
             var key = Object.keys(object)[0];
             if      ( MASTER_OBJECTS[key] && key == 'chart' ) slideObj.addChart( CHART_TYPES[(object.chart.type||'').toUpperCase()], object.chart.data, object.chart.opts );
             else if ( MASTER_OBJECTS[key] && key == 'image' ) slideObj.addImage(object[key]);
@@ -4393,8 +4373,8 @@ var PptxGenJS = function(){
     var api = this;
     var opts = inOpts || {};
     var arrObjTabHeadRows = [], arrObjTabBodyRows = [], arrObjTabFootRows = [];
-    var arrObjSlides = [], arrRows = [], arrColW = [], arrTabColW = [];
-    var intTabW = 0, emuTabCurrH = 0;
+    var arrColW = [], arrTabColW = [];
+    var intTabW = 0;
 
     // REALITY-CHECK:
     if ( $$('#'+tabEleId).length == 0 ) { console.error('Table "'+tabEleId+'" does not exist!'); return; }
@@ -4424,12 +4404,12 @@ var PptxGenJS = function(){
       else if ( !isNaN(opts.margin) ) arrInchMargins = [opts.margin, opts.margin, opts.margin, opts.margin];
     }
     var emuSlideTabW = ( opts.w ? inch2Emu(opts.w) : (gObjPptx.pptLayout.width  - inch2Emu(arrInchMargins[1] + arrInchMargins[3])) );
-    var emuSlideTabH = ( opts.h ? inch2Emu(opts.h) : (gObjPptx.pptLayout.height - inch2Emu(arrInchMargins[0] + arrInchMargins[2])) );
+    //var emuSlideTabH = ( opts.h ? inch2Emu(opts.h) : (gObjPptx.pptLayout.height - inch2Emu(arrInchMargins[0] + arrInchMargins[2])) );
 
     // STEP 1: Grab table col widths
     $$.each(['thead','tbody','tfoot'], function(i,val){
       if ( $$('#'+tabEleId+' > '+val+' > tr').length > 0 ) {
-        $$('#'+tabEleId+' > '+val+' > tr:first-child').find('> th, > td').each(function(i,cell){
+        $$('#'+tabEleId+' > '+val+' > tr:first-child').find('> th, > td').each(function(){
           // FIXME: This is a hack - guessing at col widths when colspan
           if ( $$(this).attr('colspan') ) {
             for (var idx=0; idx<$$(this).attr('colspan'); idx++ ) {
@@ -4530,7 +4510,7 @@ var PptxGenJS = function(){
     opts.colW = arrColW;
 
     getSlidesForTableRows( arrObjTabHeadRows.concat(arrObjTabBodyRows).concat(arrObjTabFootRows), opts )
-    .forEach(function(arrTabRows,i){
+    .forEach(function(arrTabRows){
       // A: Create new Slide
       var newSlide = ( opts.master ? api.addNewSlide(opts.master) : api.addNewSlide() );
 
