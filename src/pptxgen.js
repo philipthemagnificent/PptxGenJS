@@ -79,7 +79,7 @@ const isPlainObject = (obj) => {
   }
 
   if ( obj.constructor &&
-      !hasOwn.call( obj.constructor.prototype, "isPrototypeOf" ) ) {
+      !hasOwnProperty.call( obj.constructor.prototype, "isPrototypeOf" ) ) {
     return false;
   }
 
@@ -109,7 +109,7 @@ $$.each = (obj, callback) => {
   return obj;
 };
 
-$$.extend = () => {
+const extend = () => {
   var options, name, src, copy, copyIsArray, clone,
     target = arguments[0] || {},
     i = 1,
@@ -173,7 +173,7 @@ $$.extend = () => {
   // Return the modified object
   return target;
 };
-
+$$.extend = extend;
 // A: Load depdendencies
 var JSZip = require("jszip");
 
@@ -247,11 +247,10 @@ var PptxGenJS = function(){
   var DEF_SLIDE_MARGIN_IN = [0.5, 0.5, 0.5, 0.5]; // TRBL-style
   var DEF_CHART_GRIDLINE = { color: "888888", style: "solid", size: 1 };
   var DEF_SHAPE_SHADOW = { type: 'outer', blur: 3, offset: (23000 / 12700), angle: 90, color: '000000', opacity: 0.35, rotateWithShape: true };
-  var DEF_TEXT_SHADOW = { type: 'outer', blur: 8, offset: 4, angle: 270, color: '000000', opacity: 0.75 };
-  var AXIS_ID_VALUE_PRIMARY = '2094734552';
-  var AXIS_ID_VALUE_SECONDARY = '2094734553';
-  var AXIS_ID_CATEGORY_PRIMARY = '2094734554';
-  var AXIS_ID_CATEGORY_SECONDARY = '2094734555';
+  var AXIS_ID_VALUE_PRIMARY       = '2094734552';
+  var AXIS_ID_VALUE_SECONDARY     = '2094734553';
+  var AXIS_ID_CATEGORY_PRIMARY    = '2094734554';
+  var AXIS_ID_CATEGORY_SECONDARY  = '2094734555';
 
   // A: Create internal pptx object
   var gObjPptx = {};
@@ -366,9 +365,9 @@ var PptxGenJS = function(){
      * @param {Object} target slide object that the text should be added to
      */
     addTextDefinition: function addTextDefinition(text, opt, target) {
-      var opt = ( opt && typeof opt === 'object' ? opt : {} );
+      opt = ( opt && typeof opt === 'object' ? opt : {} );
+      text = ( text || '' );
       var resultObject = {};
-      var text = ( text || '' );
       if ( Array.isArray(text) && text.length == 0 ) text = '';
 
       // STEP 2: Set some options
@@ -466,7 +465,7 @@ var PptxGenJS = function(){
         intWidth = (strImagePath.cx || strImagePath.w || 0);
         intHeight = (strImagePath.cy || strImagePath.h || 0);
         sizing = strImagePath.sizing || null;
-        objHyperlink = (strImagePath.hyperlink || '');
+        var objHyperlink = (strImagePath.hyperlink || '');
         strImageData = (strImagePath.data || '');
         strImagePath = (strImagePath.path || ''); // IMPORTANT: This line must be last as were about to ovewrite ourself!
       }
@@ -731,7 +730,7 @@ var PptxGenJS = function(){
 
       // STEP 2: Add all Slide Master objects in the order they were given (Issue#53)
       if ( slideDef.objects && Array.isArray(slideDef.objects) && slideDef.objects.length > 0 ) {
-        slideDef.objects.forEach(function(object,idx){
+        slideDef.objects.forEach(function(object){
           var key = Object.keys(object)[0];
           if      ( MASTER_OBJECTS[key] && key == 'chart' ) gObjPptxGenerators.addChartDefinition(CHART_TYPES[(object.chart.type||'').toUpperCase()], object.chart.data, object.chart.opts, target);
           else if ( MASTER_OBJECTS[key] && key == 'image' ) gObjPptxGenerators.addImageDefinition(object[key], target);
@@ -814,7 +813,7 @@ var PptxGenJS = function(){
             // Calc number of columns
             // NOTE: Cells may have a colspan, so merely taking the length of the [0] (or any other) row is not
             // ....: sufficient to determine column count. Therefore, check each cell for a colspan and total cols as reqd
-            arrTabRows[0].forEach(function(cell,idx){
+            arrTabRows[0].forEach(function(cell){
               var cellOpts = cell.options || cell.opts || null; // DEPRECATED (`opts`)
               intColCnt += ( cellOpts && cellOpts.colspan ? cellOpts.colspan : 1 );
             });
@@ -856,7 +855,7 @@ var PptxGenJS = function(){
               intColW = ( objTabOpts.colW ? objTabOpts.colW : EMU );
               if ( slideItemObj.options.cx && !objTabOpts.colW ) intColW = Math.round( slideItemObj.options.cx / intColCnt ); // FIX: Issue#12
               strXml += '<a:tblGrid>';
-              for ( var col=0; col<intColCnt; col++ ) { strXml += '<a:gridCol w="'+ intColW +'"/>'; }
+              for ( col=0; col<intColCnt; col++ ) { strXml += '<a:gridCol w="'+ intColW +'"/>'; }
               strXml += '</a:tblGrid>';
             }
 
@@ -944,7 +943,7 @@ var PptxGenJS = function(){
                   // B: Apply default values (tabOpts being used when cellOpts dont exist):
                   // SEE: http://officeopenxml.com/drwTableCellProperties-alignment.php
                   ['align','bold','border','color','fill','font_face','font_size','margin','marginPt','underline','valign']
-                  .forEach(function(name,idx){
+                  .forEach(function(name){
                     if ( objTabOpts[name] && !cellOpts[name] && cellOpts[name] != 0 ) cellOpts[name] = objTabOpts[name];
                   });
 
@@ -1051,7 +1050,6 @@ var PptxGenJS = function(){
               slideItemObj.options.bodyProp.tIns = (slideItemObj.options.margin * ONEPT);
             }
 
-            var effectsList = '';
             if ( shapeType == null ) shapeType = getShapeInfo(null);
 
             // A: Start SHAPE =======================================================
@@ -1293,7 +1291,7 @@ var PptxGenJS = function(){
       var strXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' + CRLF;
       strXml += '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">';
       // Add any rels for this Slide (image/audio/video/youtube/chart)
-      slideObject.rels.forEach(function(rel, idx){
+      slideObject.rels.forEach(function(rel){
         lastRid = Math.max(lastRid, rel.rId);
         if      ( rel.type.toLowerCase().indexOf('image')  > -1 ) {
           strXml += '<Relationship Id="rId'+ rel.rId +'" Target="'+ rel.Target +'" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image"/>';
@@ -1349,7 +1347,7 @@ var PptxGenJS = function(){
       contain: function(imgSize, boxDim) {
         var imgRatio = imgSize.h / imgSize.w,
           boxRatio = boxDim.h / boxDim.w,
-          widthBased = boxRatio > imgRatio;
+          widthBased = boxRatio > imgRatio,
           width =  widthBased ? boxDim.w : (boxDim.h / imgRatio),
           height = widthBased ? (boxDim.w * imgRatio) : boxDim.h,
           hzPerc = Math.round(1e5 * 0.5 * (1 - boxDim.w / width)),
@@ -1467,10 +1465,10 @@ var PptxGenJS = function(){
           strSharedStrings += '<sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="'+ (data[0].labels.length + data.length + 1) +'" uniqueCount="'+ (data[0].labels.length + data.length +1) +'">'
 
           // A: Add Labels
-          data[0].labels.forEach(function(label,idx){ strSharedStrings += '<si><t>'+ decodeXmlEntities(label) +'</t></si>'; });
+          data[0].labels.forEach(function(label){ strSharedStrings += '<si><t>'+ decodeXmlEntities(label) +'</t></si>'; });
 
           // B: Add Series
-          data.forEach(function(objData,idx){ strSharedStrings += '<si><t>'+ (objData.name || ' ') +'</t></si>'; });
+          data.forEach(function(objData){ strSharedStrings += '<si><t>'+ (objData.name || ' ') +'</t></si>'; });
 
           // C: Add 'blank' for A1
           strSharedStrings += '<si><t xml:space="preserve"></t></si>';
@@ -1597,7 +1595,7 @@ var PptxGenJS = function(){
    */
   function doExportPresentation(outputType) {
     var arrChartPromises = [];
-    var intSlideNum = 0, intRels = 0;
+    var intSlideNum = 0;
 
     // STEP 1: Create new JSZip file
     var zip = new JSZip();
@@ -1632,7 +1630,7 @@ var PptxGenJS = function(){
       }
 
     // Create a Layout/Master/Rel/Slide file for each SLIDE
-    for ( var idx=0; idx<gObjPptx.slides.length; idx++ ) {
+    for ( idx=0; idx<gObjPptx.slides.length; idx++ ) {
       intSlideNum++;
       zip.file("ppt/slides/slide"+ intSlideNum +".xml", makeXmlSlide(gObjPptx.slides[idx]));
       zip.file("ppt/slides/_rels/slide"+ intSlideNum +".xml.rels", makeXmlSlideRel( intSlideNum ));
@@ -1642,17 +1640,17 @@ var PptxGenJS = function(){
     zip.file("ppt/slideMasters/_rels/slideMaster1.xml.rels", makeXmlMasterRel(gObjPptx.masterSlide));
 
     // Create all Rels (images, media, chart data)
-    gObjPptx.slideLayouts.forEach(function(layout,idx){
+    gObjPptx.slideLayouts.forEach(function(layout){
       createMediaFiles(layout, zip, arrChartPromises);
     });
-    gObjPptx.slides.forEach(function(slide,idx){
+    gObjPptx.slides.forEach(function(slide){
       createMediaFiles(slide, zip, arrChartPromises);
     });
     createMediaFiles(gObjPptx.masterSlide, zip, arrChartPromises);
 
     // STEP 3: Wait for Promises (if any) then generate the PPTX file
     Promise.all( arrChartPromises )
-    .then(function(arrResults){
+    .then(function(){
       var strExportName = ((gObjPptx.fileName.toLowerCase().indexOf('.ppt') > -1) ? gObjPptx.fileName : gObjPptx.fileName+gObjPptx.fileExtn);
       if ( outputType && JSZIP_OUTPUT_TYPES.indexOf(outputType) >= 0) {
         zip.generateAsync({ type:outputType }).then(gObjPptx.saveCallback);
@@ -1676,7 +1674,7 @@ var PptxGenJS = function(){
     // DESIGN: Use `createObjectURL()` (or MS-specific func for IE11) to D/L files in client browsers (FYI: synchronously executed)
     if ( window.navigator.msSaveOrOpenBlob ) {
       // REF: https://docs.microsoft.com/en-us/microsoft-edge/dev-guide/html5/file-api/blob
-      blobObject = new Blob([content]);
+      var blobObject = new Blob([content]);
       $$(a).click(function(){
         window.navigator.msSaveOrOpenBlob(blobObject, strExportName);
       });
@@ -1754,7 +1752,7 @@ var PptxGenJS = function(){
    * DESC: Used by `addSlidesForTable()` to convert RGB colors from jQuery selectors to Hex for Presentation colors
    */
   function rgbToHex(r, g, b) {
-    if (! Number.isInteger(r)) { try { console.warn('Integer expected!'); } catch(ex){} }
+    if (!Number.isInteger(r)) console.warn('Integer expected!');
     return (componentToHex(r) + componentToHex(g) + componentToHex(b)).toUpperCase();
   }
 
@@ -1766,24 +1764,25 @@ var PptxGenJS = function(){
     return Math.round(EMU * inches);
   }
 
-  function getSizeFromImage(inImgUrl) {
-    // A: Create
-    var image = new Image();
+  // Placeholder
+  // function getSizeFromImage(inImgUrl) {
+  //   // A: Create
+  //   var image = new Image();
 
-    // B: Set onload event
-    image.onload = function(){
-      // FIRST: Check for any errors: This is the best method (try/catch wont work, etc.)
-      if (this.width + this.height == 0) { return { width:0, height:0 }; }
-      var obj = { width:this.width, height:this.height };
-      return obj;
-    };
-    image.onerror = function(){
-      try { console.error( '[Error] Unable to load image: ' + inImgUrl ); } catch(ex){}
-    };
+  //   // B: Set onload event
+  //   image.onload = function(){
+  //     // FIRST: Check for any errors: This is the best method (try/catch wont work, etc.)
+  //     if (this.width + this.height == 0) { return { width:0, height:0 }; }
+  //     var obj = { width:this.width, height:this.height };
+  //     return obj;
+  //   };
+  //   image.onerror = function(){
+  //     try { console.error( '[Error] Unable to load image: ' + inImgUrl ); } catch(ex){}
+  //   };
 
-    // C: Load image
-    image.src = inImgUrl;
-  }
+  //   // C: Load image
+  //   image.src = inImgUrl;
+  // }
 
   function convertImgToDataURLviaCanvas(slideRel) {
     // A: Create
@@ -1809,12 +1808,11 @@ var PptxGenJS = function(){
       canvas = null;
     };
     image.onerror = function(){
-      try {
-        if ( typeof window !== 'undefined' && window.location.href.indexOf('file:') == 0 ) {
-          console.warn("WARNING: You are running this in a local web browser, which means you cant read local files!\n(use '--allow-file-access-from-files' flag with Chrome, etc.)");
-        }
-        console.error('Unable to load image: "'+ slideRel.path +'"\nPlease check the image URL:\n'+ ( slideRel.path.indexOf('/') == 0 ? slideRel.path : window.location.href.substring(0,window.location.href.lastIndexOf('/')+1) + slideRel.path ) );
-      } catch(ex){}
+      if ( typeof window !== 'undefined' && window.location.href.indexOf('file:') == 0 ) {
+        console.warn("WARNING: You are running this in a local web browser, which means you cant read local files!\n(use '--allow-file-access-from-files' flag with Chrome, etc.)");
+      }
+      console.error('Unable to load image: "'+ slideRel.path +'"\nPlease check the image URL:\n'+ ( slideRel.path.indexOf('/') == 0 ? slideRel.path : window.location.href.substring(0,window.location.href.lastIndexOf('/')+1) + slideRel.path ) );
+      
       // Return a predefined "Broken image" graphic so the user will see something on the slide
       callbackImgToDataURLDone(IMG_BROKEN, slideRel);
     };
@@ -1825,16 +1823,16 @@ var PptxGenJS = function(){
 
   function callbackImgToDataURLDone(inStr, slideRel) {
     var intEmpty = 0;
-    var clbk = function(rel, i){
+    var clbk = function(rel){
       if ( rel.path == slideRel.path ) rel.data = inStr;
       if ( !rel.data ) intEmpty++;
     }
 
     // STEP 1: Set data for this rel, count outstanding
-    gObjPptx.slides.forEach(function(slide,i) {
+    gObjPptx.slides.forEach(function(slide) {
       slide.rels.forEach(clbk);
     });
-    gObjPptx.slideLayouts.forEach(function(layout,i) {
+    gObjPptx.slideLayouts.forEach(function(layout) {
       layout.rels.forEach(clbk);
     });
     gObjPptx.masterSlide.rels.forEach(clbk);
@@ -1898,7 +1896,7 @@ var PptxGenJS = function(){
     else if ( Array.isArray(inText) ) arrTextObjects = inText;
     else if ( typeof inText === 'object' ) arrTextObjects = [inText];
 
-    arrTextObjects.forEach(function(text,idx){
+    arrTextObjects.forEach(function(text){
       // `text` can be an array of other `text` objects (table cell word-level formatting), so use recursion
       if ( Array.isArray(text) ) createHyperlinkRels(text, slideRels);
       else if ( text && typeof text === 'object' && text.options && text.options.hyperlink && !text.options.hyperlink.rId ) {
@@ -1906,7 +1904,7 @@ var PptxGenJS = function(){
         else if ( !text.options.hyperlink.url || typeof text.options.hyperlink.url !== 'string' ) console.log("ERROR: 'hyperlink.url is required and/or should be a string'");
         else {
           var intRels = 1;
-          gObjPptx.slides.forEach(function(slide,idx){ intRels += slide.rels.length; });
+          gObjPptx.slides.forEach(function(slide){ intRels += slide.rels.length; });
           var intRelId = intRels+1;
 
           slideRels.push({
@@ -1963,13 +1961,11 @@ var PptxGenJS = function(){
   /**
   * Magic happens here
   */
-  function getSlidesForTableRows(inArrRows, opts) {
+  function getSlidesForTableRows(inArrRows, opts={}) {
     var LINEH_MODIFIER = 1.9;
-    var opts = opts || {};
     var arrInchMargins = DEF_SLIDE_MARGIN_IN; // (0.5" on all sides)
-    var arrObjTabHeadRows = [], arrObjTabBodyRows = [], arrObjTabFootRows = [];
     var arrObjSlides = [], arrRows = [], currRow = [];
-    var intTabW = 0, emuTabCurrH = 0;
+    var emuTabCurrH = 0;
     var emuSlideTabW = EMU*1, emuSlideTabH = EMU*1;
     var arrObjTabHeadRows = opts.arrObjTabHeadRows || '';
     var numCols = 0;
@@ -1995,7 +1991,7 @@ var PptxGenJS = function(){
     // STEP 2: Calc number of columns
     // NOTE: Cells may have a colspan, so merely taking the length of the [0] (or any other) row is not
     // ....: sufficient to determine column count. Therefore, check each cell for a colspan and total cols as reqd
-    inArrRows[0].forEach(function(cell,idx){
+    inArrRows[0].forEach(function(cell){
       if (!cell) cell = {};
       var cellOpts = cell.options || cell.opts || null; // DEPRECATED (`opts`)
       numCols += ( cellOpts && cellOpts.colspan ? cellOpts.colspan : 1 );
@@ -2006,7 +2002,7 @@ var PptxGenJS = function(){
 
     // Calc opts.w if we can
     if ( !opts.w && opts.colW ) {
-      if ( Array.isArray(opts.colW) ) opts.colW.forEach(function(val,idx){ opts.w += val });
+      if ( Array.isArray(opts.colW) ) opts.colW.forEach(function(val){ opts.w += val });
       else { opts.w = opts.colW * numCols }
     }
 
@@ -2019,9 +2015,9 @@ var PptxGenJS = function(){
     if ( !opts.colW || !Array.isArray(opts.colW) ) {
       if ( opts.colW && !isNaN(Number(opts.colW)) ) {
         var arrColW = [];
-        inArrRows[0].forEach(function(cell,idx){ arrColW.push( opts.colW ) });
+        inArrRows[0].forEach(function(){ arrColW.push( opts.colW ) });
         opts.colW = [];
-        arrColW.forEach(function(val,idx){ opts.colW.push(val) });
+        arrColW.forEach(function(val){ opts.colW.push(val) });
       }
       // No column widths provided? Then distribute cols.
       else {
@@ -2034,7 +2030,7 @@ var PptxGenJS = function(){
     // NOTE: inArrRows will be an array of {text:'', opts{}} whether from `addSlidesForTable()` or `.addTable()`
     inArrRows.forEach(function(row,iRow){
       // A: Reset ROW variables
-      var arrCellsLines = [], arrCellsLineHeights = [], emuRowH = 0, intMaxLineCnt = 0, intMaxColIdx = 0;
+      var arrCellsLines = [], arrCellsLineHeights = [], intMaxLineCnt = 0, intMaxColIdx = 0;
 
       // B: Calc usable vertical space/table height
       // NOTE: Use margins after the first Slide (dont re-use opt.y - it could've been halfway down the page!) (ISSUE#43,ISSUE#47,ISSUE#48)
@@ -2075,7 +2071,7 @@ var PptxGenJS = function(){
         currRow.push({ text:'', opts:cell.opts });
 
         // 3: Parse cell contents into lines (**MAGIC HAPPENSS HERE**)
-        var lines = parseTextToLines(cell, (opts.colW[iCell]/ONEPT));
+        lines = parseTextToLines(cell, (opts.colW[iCell]/ONEPT));
         arrCellsLines.push( lines );
         //if (opts.debug) console.log('Cell:'+iCell+' - lines:'+lines.length);
 
@@ -2168,7 +2164,7 @@ var PptxGenJS = function(){
    * @see http://officeopenxml.com/drwSp-effects.php
    *  { type: 'outer', blur: 3, offset: (23000 / 12700), angle: 90, color: '000000', opacity: 0.35, rotateWithShape: true };
    */
-  function createShadowElement(options, defaults, isShape) {
+  function createShadowElement(options, defaults) {
     if ( options === 'none' ) {
       return '<a:effectLst/>';
     }
@@ -2252,7 +2248,7 @@ var PptxGenJS = function(){
   function createGridLineElement(glOpts, defaults, type) {
     type = type || 'major';
     var tagName = 'c:'+ type + 'Gridlines';
-    strXml =  '<'+ tagName + '>';
+    var strXml =  '<'+ tagName + '>';
     strXml += ' <c:spPr>';
     strXml += '  <a:ln w="' + Math.round((glOpts.size || defaults.size) * ONEPT) +'" cap="flat">';
     strXml += '  <a:solidFill><a:srgbClr val="' + (glOpts.color || defaults.color) + '"/></a:solidFill>'; // should accept scheme colors as implemented in PR 135
@@ -2266,7 +2262,7 @@ var PptxGenJS = function(){
   function encodeImageRelations(layout, arrRelsDone) {
     var intRels = 0;
 
-    layout.rels.forEach(function(rel,idy){
+    layout.rels.forEach(function(rel){
       // Read and Encode each image into base64 for use in export
       if ( rel.type != 'online' && rel.type != 'chart' && !rel.data && $$.inArray(rel.path, arrRelsDone) == -1 ) {
         intRels++;
@@ -2279,7 +2275,7 @@ var PptxGenJS = function(){
   }
 
   function createMediaFiles(layout, zip, chartPromises) {
-    layout.rels.forEach(function(rel, idy) {
+    layout.rels.forEach(function(rel) {
       if ( rel.type == 'chart' ) {
         chartPromises.push(gObjPptxGenerators.createExcelWorksheet(rel, zip));
       }
@@ -2301,7 +2297,7 @@ var PptxGenJS = function(){
   /**
    * shallow mix, returns new object
    */
-  function mix (o1, o2, etc) {
+  function mix (o1, o2) {
     var o = {};
     for (var i = 0; i <= arguments.length; i++){
       var oN = arguments[i];
