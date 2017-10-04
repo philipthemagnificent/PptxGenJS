@@ -1,4 +1,5 @@
 var gulp       = require('gulp'),
+    gutil      = require('gulp-util'),
     eslint     = require('gulp-eslint'),
     concat     = require('gulp-concat'),
     sourcemaps = require('gulp-sourcemaps'),
@@ -10,7 +11,7 @@ gulp.task('build', ['lint'], function () {
         .pipe(concat('pptxgen.bundle.js'))
         .pipe(sourcemaps.init())
         .pipe(ignore.exclude(["**/*.map"]))
-        .pipe(uglify())
+        .pipe(uglify().on('error', gutil.log))
         .pipe(sourcemaps.write('./'))
         .pipe(gulp.dest('dist/'));
 
@@ -22,7 +23,7 @@ gulp.task('build', ['lint'], function () {
 gulp.task('lint', () => {
   const src = [ 'src/**/*.js' ];
   return gulp.src(src)
-    .pipe(eslint({fix:true}))
+    .pipe(eslint())
     .pipe(eslint.format())
     .pipe(eslint.failAfterError());
 });
